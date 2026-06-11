@@ -3,6 +3,16 @@
 This file tells an AI agent exactly how to work in this repository.
 Read this before touching any code.
 
+## Harness Scripts (Defined by This Repo)
+
+| Script | When it runs | What it does |
+|---|---|---|
+| `.harness/test.sh` | Pass 1 — after every dev loop | Unit tests (controllers, middleware, models) — no DB needed |
+| `.harness/regression.sh` | Pass 2 — after dev loop completes | Full regression: build + unit + integration (if DB available) |
+| `.harness/rules.md` | Stage 2 — prompt building | Coding standards injected into Claude's context |
+
+The harness runs these scripts automatically. You do not need to call them manually.
+
 ---
 
 ## Environment Setup (Already Done in Sandbox)
