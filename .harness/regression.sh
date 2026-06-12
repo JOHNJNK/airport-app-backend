@@ -58,7 +58,7 @@ echo ""
 
 # ── Step 1: Build check ───────────────────────────────────────────────────
 echo "→ Build check..."
-$GO build ./controllers/... ./middleware/... ./models/... ./repositories/...
+$GO build -buildvcs=false ./controllers/... ./middleware/... ./models/... ./repositories/...
 echo "  Build OK ✓"
 echo ""
 
@@ -79,17 +79,22 @@ fi
 
 echo "→ Starting test database (docker-compose.test.yml)..."
 $DOCKER_COMPOSE -f docker-compose.test.yml up -d
-echo "  Waiting for Postgres..."
-RETRIES=30
-until $DOCKER_COMPOSE -f docker-compose.test.yml ps 2>/dev/null | grep -q "healthy"; do
+
+echo "  Waiting for Postgres to be healthy..."
+RETRIES=40
+until $DOCKER_COMPOSE -f docker-compose.test.yml ps 2>/dev/null | grep -E "(healthy|running)" | grep -i "db" | grep -v "unhealthy" | grep -v "starting" | grep -q "."; do
     RETRIES=$((RETRIES - 1))
-    [ $RETRIES -le 0 ] && echo "  Postgres timed out" && exit 1
-    sleep 2
+    [ $RETRIES -le 0 ] && echo "  Postgres timed out — check docker-compose.test.yml" && exit 1
+    sleep 3
 done
 echo "  Postgres ready ✓"
 echo ""
 
-[ -f .env.test ] && export $(grep -v '^#' .env.test | xargs)
+# Load test env vars AND create .env file (app uses godotenv.Load() which reads .env directly)
+if [ -f .env.test ]; then
+    export $(grep -v '^#' .env.test | xargs) 2>/dev/null || true
+    cp .env.test .env
+fi
 
 # ── Step 4: Integration tests (real DB) ──────────────────────────────────
 echo "→ Integration tests (real Postgres)..."
@@ -98,8 +103,9 @@ echo "  Integration tests OK ✓"
 echo ""
 
 # ── Step 5: Build and start app ───────────────────────────────────────────
-echo "→ Starting application on :$APP_PORT..."
-$GO build -o /tmp/airport-regression-app . 2>&1
+echo "→ Building application..."
+# -buildvcs=false avoids git VCS errors in environments with incomplete git state (e.g. E2B)
+$GO build -buildvcs=false -o /tmp/airport-regression-app . 2>&1
 /tmp/airport-regression-app &
 APP_PID=$!
 
