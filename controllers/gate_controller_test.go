@@ -149,6 +149,19 @@ func TestHandleGetAllGatesWhenPageIsGiven(t *testing.T) {
 	assert.Contains(t, gatesFromResponse, gate2)
 }
 
+func TestHandleGetAllGatesWhenPageIsNonNumeric(t *testing.T) {
+	beforeEachGateTest(t)
+	gateContext.Request, _ = http.NewRequest(http.MethodGet, GATES+"?page=abc", nil)
+
+	gateController.HandleGetAllGates(gateContext)
+
+	response := gateResponseRecorder.Result()
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"error\":\"invalid page parameter\"}", string(responseBody))
+}
+
 func TestHandleGetAllGatesWhenRepositoryReturnsError(t *testing.T) {
 	beforeEachGateTest(t)
 	mockGateRepository.EXPECT().GetAllGates(gomock.Any(), gomock.Any()).Return(nil, errors.New("Invalid"))

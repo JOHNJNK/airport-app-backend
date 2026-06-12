@@ -64,6 +64,19 @@ func TestHandleGetAllAirlines(t *testing.T) {
 	assert.Contains(t, airlinesFromResponse, airline3)
 }
 
+func TestHandleGetAllAirlinesWhenPageIsNonNumeric(t *testing.T) {
+	beforeEachAirlineTest(t)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?page=abc", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"error\":\"invalid page parameter\"}", string(responseBody))
+}
+
 func TestHandleGetAllAirlinesWhenServiceReturnsError(t *testing.T) {
 	beforeEachAirlineTest(t)
 	mockAirlineRepository.EXPECT().GetAllAirlines(gomock.Any()).Return(nil, errors.New("Invalid"))

@@ -2,15 +2,14 @@ package controllers
 
 import (
 	"airport-app-backend/models"
+	"airport-app-backend/repositories"
 	"net/http"
 	"strconv"
-
-	"github.com/gin-gonic/gin/binding"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/rs/zerolog/log"
-
-	"airport-app-backend/repositories"
 )
 
 var ALL_FLOOR = "*"
@@ -39,7 +38,16 @@ func (gc *GateController) HandleGetAllGates(ctx *gin.Context) {
 	log.Debug().Msg("Getting list of gates")
 
 	// TODO: Convert to using a pagination library to handle this and other edge cases
-	page, _ := strconv.Atoi(ctx.Query("page"))
+	pageQuery := strings.TrimSpace(ctx.Query("page"))
+	var page int
+	if pageQuery != "" {
+		var err error
+		page, err = strconv.Atoi(pageQuery)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid page parameter"})
+			return
+		}
+	}
 	if page < 0 {
 		ctx.JSON(400, gin.H{"msg": "Page number must be greater than 0"})
 		return

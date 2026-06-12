@@ -31,7 +31,16 @@ func NewAirlineController(repository repositories.IAirlineRepository) *AirlineCo
 // @Failure 		500		"Internal server error"
 func (ac *AirlineController) HandleGetAllAirlines(ctx *gin.Context) {
 	// TODO: Convert to using a pagination library to handle this and other edge cases
-	page, _ := strconv.Atoi(ctx.Query("page"))
+	pageQuery := ctx.Query("page")
+	var page int
+	if pageQuery != "" {
+		var err error
+		page, err = strconv.Atoi(pageQuery)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid page parameter"})
+			return
+		}
+	}
 	if page < 0 {
 		ctx.JSON(400, gin.H{"msg": "Page number must be greater than 0"})
 		return
