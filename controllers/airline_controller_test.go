@@ -56,7 +56,7 @@ func TestHandleGetAllAirlines(t *testing.T) {
 
 	responseBody, _ := io.ReadAll(response.Body)
 	var airlinesFromResponse []models.Airline
-	json.Unmarshal([]byte(responseBody), &airlinesFromResponse)
+	assert.NoError(t, json.Unmarshal(responseBody, &airlinesFromResponse))
 
 	assert.Equal(t, 3, len(airlinesFromResponse))
 	assert.Contains(t, airlinesFromResponse, airline1)
@@ -75,6 +75,21 @@ func TestHandleGetAllAirlinesWhenPageIsNonNumeric(t *testing.T) {
 
 	responseBody, _ := io.ReadAll(response.Body)
 	assert.Equal(t, "{\"error\":\"invalid page parameter\"}", string(responseBody))
+}
+
+// TestHandleGetAllAirlinesWhenPageIsNegative verifies that ?page=-1 returns 400
+// because page numbers must be >= 0.
+func TestHandleGetAllAirlinesWhenPageIsNegative(t *testing.T) {
+	beforeEachAirlineTest(t)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?page=-1", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"msg\":\"Page number must be greater than 0\"}", string(responseBody))
 }
 
 func TestHandleGetAllAirlinesWhenServiceReturnsError(t *testing.T) {
@@ -106,7 +121,7 @@ func TestHandleGetAirline(t *testing.T) {
 
 	responseBody, _ := io.ReadAll(response.Body)
 	var airlineFromResponse models.Airline
-	json.Unmarshal([]byte(responseBody), &airlineFromResponse)
+	assert.NoError(t, json.Unmarshal(responseBody, &airlineFromResponse))
 
 	assert.Equal(t, airline, airlineFromResponse)
 }
@@ -334,4 +349,144 @@ func TestHandleUpdateAirlineWhenTheMandatoryKeyIsAbsent(t *testing.T) {
 
 	responseBody, _ := io.ReadAll(response.Body)
 	assert.Equal(t, "{\"Error\":\"Key: 'Airline.Name' Error:Field validation for 'Name' failed on the 'required' tag\"}", string(responseBody))
+}
+
+// --- SearchAirlinesByName tests ---
+
+// TestHandleSearchAirlinesByNameFound verifies that when ?name=<term> matches airlines,
+// the handler returns 200 with the matching results.
+func TestHandleSearchAirlinesByNameFound(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	airline1 := models.Airline{Name: "British Airways"}
+	airline2 := models.Airline{Name: "British Midland"}
+	expectedAirlines := []models.Airline{airline1, airline2}
+
+	mockAirlineRepository.EXPECT().SearchAirlinesByName("British").Return(expectedAirlines, nil)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=British", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	var airlinesFromResponse []models.Airline
+	assert.NoError(t, json.Unmarshal(responseBody, &airlinesFromResponse))
+
+	assert.Equal(t, 2, len(airlinesFromResponse))
+	assert.Contains(t, airlinesFromResponse, airline1)
+	assert.Contains(t, airlinesFromResponse, airline2)
+}
+
+// TestHandleSearchAirlinesByNameNotFound verifies that when ?name=<term> matches no
+// airlines, the handler returns 200 with an empty JSON array (not null).
+func TestHandleSearchAirlinesByNameNotFound(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	mockAirlineRepository.EXPECT().SearchAirlinesByName("nonexistent").Return([]models.Airline{}, nil)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=nonexistent", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	var airlinesFromResponse []models.Airline
+	assert.NoError(t, json.Unmarshal(responseBody, &airlinesFromResponse))
+
+	assert.Equal(t, 0, len(airlinesFromResponse))
+	// Confirm wire format is [] not null
+	assert.Equal(t, "[]", string(responseBody))
+}
+
+// TestHandleSearchAirlinesByNameNilSliceNormalized verifies that when the repository
+// returns (nil, nil) — a valid empty-result signal — the handler normalises the nil
+// slice to an empty slice so the JSON response is [] rather than null.
+func TestHandleSearchAirlinesByNameNilSliceNormalized(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	// Repository returns nil slice (not an empty allocated slice) with no error.
+	mockAirlineRepository.EXPECT().SearchAirlinesByName("air").Return(nil, nil)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=air", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	// Must be the JSON empty-array literal, not "null".
+	assert.Equal(t, "[]", string(responseBody))
+}
+
+// TestHandleSearchAirlinesByNameEmptyFallsThroughToPagination verifies that when
+// ?name= (empty string) is provided, the handler falls through to the normal
+// pagination path and SearchAirlinesByName is never called.
+func TestHandleSearchAirlinesByNameEmptyFallsThroughToPagination(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	airline1 := factory.ConstructAirline()
+	airlines := []models.Airline{airline1}
+
+	// SearchAirlinesByName must NOT be called — only GetAllAirlines.
+	mockAirlineRepository.EXPECT().GetAllAirlines(gomock.Any()).Return(airlines, nil)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	var airlinesFromResponse []models.Airline
+	assert.NoError(t, json.Unmarshal(responseBody, &airlinesFromResponse))
+
+	assert.Equal(t, 1, len(airlinesFromResponse))
+}
+
+// TestHandleSearchAirlinesByNameRepositoryError verifies that when
+// SearchAirlinesByName returns an error the handler responds with 500 and the
+// standard uppercase-key error envelope.
+func TestHandleSearchAirlinesByNameRepositoryError(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	mockAirlineRepository.EXPECT().SearchAirlinesByName("air").Return(nil, errors.New("db error"))
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=air", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"Error\":\"Internal server error\"}", string(responseBody))
+}
+
+// TestHandleSearchAirlinesByNameIgnoresPageParam verifies that when both ?name and
+// ?page are supplied, the name-search path takes priority and ?page is silently
+// ignored — even when the page value would otherwise be invalid (e.g. -1).
+func TestHandleSearchAirlinesByNameIgnoresPageParam(t *testing.T) {
+	beforeEachAirlineTest(t)
+
+	airline1 := models.Airline{Name: "Air France"}
+	expectedAirlines := []models.Airline{airline1}
+
+	// The name path must fire; GetAllAirlines must NOT be called.
+	mockAirlineRepository.EXPECT().SearchAirlinesByName("Air").Return(expectedAirlines, nil)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?name=Air&page=-1", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	// 200 — name search ran, negative page was never evaluated.
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	var airlinesFromResponse []models.Airline
+	assert.NoError(t, json.Unmarshal(responseBody, &airlinesFromResponse))
+
+	assert.Equal(t, 1, len(airlinesFromResponse))
+	assert.Contains(t, airlinesFromResponse, airline1)
 }
