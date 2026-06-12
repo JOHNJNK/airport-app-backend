@@ -14,6 +14,7 @@ type IGateRepository interface {
 	GetGate(string) (*models.Gate, error)
 	CreateNewGate(*models.Gate) error
 	UpdateGate(string, models.Gate) error
+	DeleteGate(id string) error
 }
 
 func (sr *ServiceRepository) GetAllGates(page int, floorStr string) ([]models.Gate, error) {
@@ -51,4 +52,10 @@ func (sr *ServiceRepository) CreateNewGate(gate *models.Gate) error {
 func (sr *ServiceRepository) UpdateGate(id string, gate models.Gate) error {
 	err := sr.db.Where("id=?", id).Updates(gate)
 	return err.Error
+}
+
+func (sr *ServiceRepository) DeleteGate(id string) error {
+	var gate models.Gate
+	result := sr.db.Delete(&gate, "id=?", id)
+	return result.Error
 }
