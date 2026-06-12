@@ -25,9 +25,20 @@ for d in docker /usr/local/bin/docker /opt/homebrew/bin/docker /usr/bin/docker; 
     fi
 done
 
+# If docker binary exists but daemon not running, try to start it (E2B sandbox)
+if [ -n "$DOCKER_BIN" ]; then
+    if ! "$DOCKER_BIN" info &>/dev/null 2>&1; then
+        echo "  Starting Docker daemon..."
+        sudo service docker start 2>/dev/null || sudo dockerd &>/dev/null &
+        sleep 3
+        # Add current user to docker group if needed
+        sudo chmod 666 /var/run/docker.sock 2>/dev/null || true
+    fi
+fi
+
 # Support both docker compose (plugin) and docker-compose (standalone)
 DOCKER_COMPOSE=""
-if [ -n "$DOCKER_BIN" ]; then
+if [ -n "$DOCKER_BIN" ] && "$DOCKER_BIN" info &>/dev/null 2>&1; then
     if "$DOCKER_BIN" compose version &>/dev/null 2>&1; then
         DOCKER_COMPOSE="$DOCKER_BIN compose"
     elif command -v docker-compose &>/dev/null 2>&1; then
