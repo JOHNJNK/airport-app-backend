@@ -13,6 +13,17 @@
 - Route registration goes in server/ — one *_router.go file per entity
 - Test data factories go in models/factory/
 
+## File Naming (critical — do not guess)
+
+Mock files use pattern `{entity}_repository_mock.go` (NOT `mock_{entity}_repository.go`):
+- mocks/airline_repository_mock.go
+- mocks/gate_repository_mock.go
+- mocks/aircraft_repository_mock.go
+- mocks/slot_repository_mock.go
+- mocks/health_repository_mock.go
+
+Source files are in controllers/, models/, repositories/, server/ (NOT internal/).
+
 ## Test Standards
 - Use gomock for mocking repository interfaces — never use real database in unit tests
 - Use gin.CreateTestContext + httptest.NewRecorder for HTTP handler tests

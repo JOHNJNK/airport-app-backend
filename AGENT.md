@@ -121,6 +121,19 @@ func (srv *AppServer) AircraftRouter(DB *gorm.DB) {
 }
 ```
 
+### Mock file naming convention (IMPORTANT — do not guess)
+
+Mock files are in `/repo/mocks/` with the pattern `{entity}_repository_mock.go`:
+```
+mocks/airline_repository_mock.go      ← use this for airline tests
+mocks/gate_repository_mock.go         ← use this for gate tests
+mocks/aircraft_repository_mock.go     ← use this for aircraft tests
+mocks/slot_repository_mock.go         ← use this for slot tests
+mocks/health_repository_mock.go       ← use this for health tests
+```
+
+**NOT** `mock_airline_repository.go` — that is mockgen's default but NOT used here.
+
 ### Step 5 — Regenerate the mock (IMPORTANT)
 
 After changing the interface:

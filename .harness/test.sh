@@ -13,7 +13,7 @@ echo "Go binary: $GO"
 echo "Package: ./controllers/... ./middleware/... ./models/..."
 echo ""
 
-$GO test ./controllers/... ./middleware/... ./models/... -v -count=1
+$GO test -buildvcs=false ./controllers/... ./middleware/... ./models/... -v -count=1
 
 echo ""
 echo "=== Unit Tests PASSED ==="
