@@ -142,3 +142,23 @@ func (gc *GateController) HandleUpdateGate(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, "Successfully updated gate details")
 }
+
+// @Router /gate/{id} [DELETE]
+// @Summary Delete gate by Id
+// @Description Delete a gate by its Id
+// @ID delete-gate
+// @Tags gate
+// @Produce  json
+// @Param id path string true "Gate Id"
+// @Success 200  "ok"
+// @Failure 400  "Bad request"
+func (gc *GateController) HandleDeleteGate(ctx *gin.Context) {
+	id := ctx.Param("id")
+	err := gc.repository.DeleteGate(id)
+	if err != nil {
+		log.Error().Err(err).Msgf("Error deleting gate with id %s", id)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, "Deleted the gate successfully")
+}
