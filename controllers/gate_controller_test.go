@@ -163,6 +163,19 @@ func TestHandleGetAllGatesWhenRepositoryReturnsError(t *testing.T) {
 	assert.Equal(t, "{\"error\":\"Failed to fetch gates\"}", string(responseBody))
 }
 
+func TestHandleGetAllGatesWhenPageIsNonNumeric(t *testing.T) {
+	beforeEachGateTest(t)
+	gateContext.Request, _ = http.NewRequest(http.MethodGet, GATES+"?page=abc", nil)
+
+	gateController.HandleGetAllGates(gateContext)
+
+	response := gateResponseRecorder.Result()
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"error\":\"invalid page parameter\"}", string(responseBody))
+}
+
 func TestHandleGetGate(t *testing.T) {
 	beforeEachGateTest(t)
 	gateId := "123"

@@ -39,7 +39,11 @@ func (gc *GateController) HandleGetAllGates(ctx *gin.Context) {
 	log.Debug().Msg("Getting list of gates")
 
 	// TODO: Convert to using a pagination library to handle this and other edge cases
-	page, _ := strconv.Atoi(ctx.Query("page"))
+	page, err := strconv.Atoi(ctx.DefaultQuery("page", "0"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid page parameter"})
+		return
+	}
 	if page < 0 {
 		ctx.JSON(400, gin.H{"msg": "Page number must be greater than 0"})
 		return

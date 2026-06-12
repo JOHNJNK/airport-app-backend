@@ -78,6 +78,19 @@ func TestHandleGetAllAirlinesWhenServiceReturnsError(t *testing.T) {
 	assert.Equal(t, "{\"Error\":\"Internal server error\"}", string(responseBody))
 }
 
+func TestHandleGetAllAirlinesWhenPageIsNonNumeric(t *testing.T) {
+	beforeEachAirlineTest(t)
+	airlineContext.Request, _ = http.NewRequest(http.MethodGet, AIRLINES+"?page=abc", nil)
+
+	airlineController.HandleGetAllAirlines(airlineContext)
+
+	response := airlineResponseRecorder.Result()
+	assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+
+	responseBody, _ := io.ReadAll(response.Body)
+	assert.Equal(t, "{\"error\":\"invalid page parameter\"}", string(responseBody))
+}
+
 func TestHandleGetAirline(t *testing.T) {
 	beforeEachAirlineTest(t)
 	airline := factory.ConstructAirline()
