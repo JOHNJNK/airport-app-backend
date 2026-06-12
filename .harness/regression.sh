@@ -82,9 +82,13 @@ $DOCKER_COMPOSE -f docker-compose.test.yml up -d
 
 echo "  Waiting for Postgres to be healthy..."
 RETRIES=40
-until $DOCKER_COMPOSE -f docker-compose.test.yml ps 2>/dev/null | grep -E "(healthy|running)" | grep -i "db" | grep -v "unhealthy" | grep -v "starting" | grep -q "."; do
+until $DOCKER_COMPOSE -f docker-compose.test.yml ps 2>/dev/null | grep "healthy" | grep -v "unhealthy" | grep -q "."; do
     RETRIES=$((RETRIES - 1))
-    [ $RETRIES -le 0 ] && echo "  Postgres timed out — check docker-compose.test.yml" && exit 1
+    if [ $RETRIES -le 0 ]; then
+        echo "  Postgres timed out. Current state:"
+        $DOCKER_COMPOSE -f docker-compose.test.yml ps 2>/dev/null
+        exit 1
+    fi
     sleep 3
 done
 echo "  Postgres ready ✓"
