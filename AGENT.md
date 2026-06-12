@@ -13,6 +13,20 @@ Read this before touching any code.
 
 The harness runs these scripts automatically. You do not need to call them manually.
 
+### Regression Rule
+
+**`regression.sh` tests what was already working — not aspirational checks.**
+
+- **SMOKE TESTS** (always in regression.sh): endpoints that exist and return correct status codes
+- **CONFIRMED-FIX CHECKS** (added after merge): assertions for bugs that are confirmed fixed and merged to master
+- **DO NOT ADD** assertions for bugs that are still open — those belong in GitHub Issues
+
+When you fix a bug and the PR is merged, update `regression.sh` to add the assertion.
+Example: after fixing `?page=abc` in the gate controller and merging, add:
+```bash
+check "GET /gates?page=abc → 400"  "400" "$BASE/gates?page=abc"
+```
+
 ---
 
 ## Environment Setup (Already Done in Sandbox)

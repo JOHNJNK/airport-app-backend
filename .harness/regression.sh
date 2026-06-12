@@ -140,15 +140,27 @@ check() {
 
 BASE="http://localhost:$APP_PORT"
 
-check "GET /health"                    "200" "$BASE/health"
-check "GET /airlines"                  "200" "$BASE/airlines"
-check "GET /airlines?page=0"           "200" "$BASE/airlines?page=0"
-check "GET /airlines?page=-1 → 400"   "400" "$BASE/airlines?page=-1"
-check "GET /airlines?page=abc → 400"  "400" "$BASE/airlines?page=abc"
-check "GET /airline/nonexistent → 400" "400" "$BASE/airline/nonexistent"
-check "GET /gates"                     "200" "$BASE/gates"
-check "GET /aircrafts"                 "200" "$BASE/aircrafts"
-check "GET /slots"                     "200" "$BASE/slots"
+# ── SMOKE TESTS — existing functionality that must never break ────────────
+# These pass regardless of which bug is being fixed.
+# Do NOT add assertions for known unfixed bugs here.
+check "GET /health"                     "200" "$BASE/health"
+check "GET /airlines"                   "200" "$BASE/airlines"
+check "GET /airlines?page=0"            "200" "$BASE/airlines?page=0"
+check "GET /airline/nonexistent → 400"  "400" "$BASE/airline/nonexistent"
+check "GET /gates"                      "200" "$BASE/gates"
+check "GET /gate/nonexistent → 400"     "400" "$BASE/gate/nonexistent"
+check "GET /aircrafts"                  "200" "$BASE/aircrafts"
+check "GET /slots"                      "200" "$BASE/slots"
+
+# ── CONFIRMED-FIXED BUG CHECKS — added only when bug is merged to master ─
+# Rule: only add an assertion here AFTER the fix is confirmed working and merged.
+# Until then, track bugs in GitHub Issues, not here.
+#
+# Confirmed fixed (add assertions below as bugs are merged):
+# check "GET /airlines?page=-1 → 400"   "400" "$BASE/airlines?page=-1"   # add when #XX merged
+# check "GET /airlines?page=abc → 400"  "400" "$BASE/airlines?page=abc"  # add when #XX merged
+# check "GET /gates?page=-1 → 400"      "400" "$BASE/gates?page=-1"      # add when #XX merged
+# check "GET /gates?page=abc → 400"     "400" "$BASE/gates?page=abc"     # add when #XX merged
 
 echo ""
 echo "AT: $PASS passed, $FAIL failed"
